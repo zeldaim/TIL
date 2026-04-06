@@ -1,5 +1,3 @@
-# Wazuh 설치
-
 \# Wazuh 4.9.0 설치 (Docker)
 
 
