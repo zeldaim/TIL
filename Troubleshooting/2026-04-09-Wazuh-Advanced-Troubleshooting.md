@@ -4,7 +4,7 @@
 - **목표:** Wazuh Manager와 Kali Agent 연동 및 MITRE ATT&CK 기반 탐지 룰 구현
 - **환경:** - **Virtualization:** VMware (D 드라이브 기반)
   - **Container:** Docker / Docker-compose
-  - **OS:** Rocky Linux 9 (Manager), Kali Linux (Agent)
+ . - **OS:** Rocky Linux 9 (Manager), Kali Linux (Agent)
 
 ---
 
