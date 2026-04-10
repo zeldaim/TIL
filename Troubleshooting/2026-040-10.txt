@@ -1,0 +1,51 @@
+# [Troubleshooting] Logstash → Elasticsearch 연결 실패
+
+## 오류
+Connect to localhost:9201 failed: Connection refused
+
+## 원인
+컨테이너 안에서 localhost는 자기 자신을 가리킴
+Elasticsearch는 다른 컨테이너에 있어서 연결 불가
+
+## 해결
+hosts를 localhost:9201 → elasticsearch:9200 으로 변경
+
+## 배운 것
+Docker 컨테이너끼리 통신할 때
+localhost 대신 컨테이너 이름으로 접속해야 함
+
+---
+
+# [Troubleshooting] Filebeat 크래시
+
+## 오류
+Filebeat 실행 시 메모리 덤프 발생
+
+## 원인
+Rocky Linux 9와 Filebeat 버전 호환성 문제
+
+## 해결
+curl로 직접 Elasticsearch에 데이터 삽입
+head -1 /tmp/alerts.json | curl -X POST "http://localhost:9201/wazuh-alerts/_doc" \
+  -H "Content-Type: application/json" \
+  -d @-
+
+## 배운 것
+Filebeat 크래시 시 curl bulk API로 대체 가능
+
+---
+
+# [Troubleshooting] Wazuh alerts.json 경로 문제
+
+## 오류
+/var/ossec/logs/alerts/ 경로 없음
+
+## 원인
+Wazuh가 Docker 컨테이너 안에서 실행되어
+호스트에서 직접 파일 접근 불가
+
+## 해결
+docker cp single-node-wazuh.manager-1:/var/ossec/logs/alerts/alerts.json /tmp/alerts.json
+
+## 배운 것
+컨테이너 안의 파일은 docker cp로 호스트로 복사
