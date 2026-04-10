@@ -1,12 +1,12 @@
-\# 🛡️ Wazuh SIEM 구축 및 트러블슈팅 종합 리포트
+# 🛡️ Wazuh SIEM 구축 및 트러블슈팅 종합 리포트
 
 
 
-\## 1. 실습 개요
+## 1. 실습 개요
 
-\- \*\*목표:\*\* Wazuh Manager와 Kali Agent 연동 및 MITRE ATT\&CK 기반 탐지 룰 구현
+- \*\*목표:\*\* Wazuh Manager와 Kali Agent 연동 및 MITRE ATT\&CK 기반 탐지 룰 구현
 
-\- \*\*환경:\*\* VMware(D 드라이브), Docker, Rocky Linux 9, Kali Linux
+- \*\*환경:\*\* VMware(D 드라이브), Docker, Rocky Linux 9, Kali Linux
 
 
 
