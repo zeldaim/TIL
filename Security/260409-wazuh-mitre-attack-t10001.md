@@ -81,11 +81,12 @@ EOF
 exit
 
 sudo docker restart single-node-wazuh.manager-1
+```
 2.2 공격 시뮬레이션 및 검증
 Kali Linux에서 Hydra 도구를 사용하여 SSH 로그인 시도를 반복 수행했습니다.
 
-Bash
+```Bash
 # SSH 공격 수행
 hydra -l testuser -P /usr/share/wordlists/rockyou.txt ssh://[Target_IP] -t 4
-
+```
 
