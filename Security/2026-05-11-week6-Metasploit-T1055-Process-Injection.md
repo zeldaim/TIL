@@ -226,5 +226,5 @@ In Wazuh 4.9.0, custom rules targeting `windows_eventchannel` events must use `i
 
 ### Related
 
-- [Wazuh GitHub Issue](#) — Breaking change report
-- [Troubleshooting](./troubleshooting.md) — Full debug process
+- - [Wazuh GitHub Issue #36029](https://github.com/wazuh/wazuh/issues/36029)
+- [Troubleshooting](Troubleshooting/2026-05-11-Metasploit-T1055-Wazuh-Rule-Debugging.md) — Full debug process
