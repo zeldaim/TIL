@@ -1,0 +1,210 @@
+<!--
+  =============================================================
+  Wazuh Custom Rules - OPNSense Firewall Log Detection
+  Author: zeldaim
+  Description: OPNSense 방화벽 로그 기반 보안 이벤트 탐지 룰
+  Reference: home-soc-lab 실습 기반
+  =============================================================
+
+  OPNSense 로그 디코더: firewall
+  로그 수집 방법: Filebeat 또는 Wazuh Agent syslog 수집
+
+  OPNSense 로그 예시:
+  Apr 18 03:26:01 OPNsense filterlog[]: 4,,,1234,em0,match,block,in,4,0x0,,64,12345,0,none,6,tcp,60,192.168.20.10,192.168.10.20,62031,80,0,S,0,,1460,,,
+-->
+
+<group name="opnsense,firewall,">
+
+  <!-- ===========================================================
+       [Rule 100001] OPNSense 방화벽 패킷 차단 이벤트
+       LAN → WAN 방향 차단 로그 탐지
+       =========================================================== -->
+  <rule id="100001" level="6">
+    <if_group>firewall</if_group>
+    <match>block</match>
+    <description>OPNSense: Firewall block event detected</description>
+    <group>firewall_block,</group>
+  </rule>
+
+  <!-- ===========================================================
+       [Rule 100002] OPNSense 내부 → 외부 포트 스캔 의심
+       동일 출발지에서 다수 포트로 차단 발생
+       =========================================================== -->
+  <rule id="100002" level="10" frequency="10" timeframe="60">
+    <if_matched_sid>100001</if_matched_sid>
+    <same_source_ip />
+    <description>OPNSense: Possible port scan detected from same source IP (10 blocks in 60s)</description>
+    <group>port_scan,attack,</group>
+    <mitre>
+      <id>T1046</id>
+    </mitre>
+  </rule>
+
+  <!-- ===========================================================
+       [Rule 100003] OPNSense SSH 브루트포스 의심
+       동일 출발지에서 SSH(22) 포트로 반복 차단
+       =========================================================== -->
+  <rule id="100003" level="12" frequency="5" timeframe="30">
+    <if_matched_sid>100001</if_matched_sid>
+    <same_source_ip />
+    <match>dpt=22</match>
+    <description>OPNSense: Possible SSH brute force detected (5 blocks in 30s)</description>
+    <group>ssh_brute_force,attack,</group>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+  </rule>
+
+  <!-- ===========================================================
+       [Rule 100004] OPNSense Suricata IPS Alert 탐지
+       Suricata가 악성 패턴 탐지 시 발생하는 로그
+       =========================================================== -->
+  <rule id="100004" level="8">
+    <if_group>firewall</if_group>
+    <match>suricata</match>
+    <match>alert</match>
+    <description>OPNSense Suricata IPS: Alert generated</description>
+    <group>suricata,ids,</group>
+  </rule>
+
+  <!-- ===========================================================
+       [Rule 100005] OPNSense Suricata IPS Drop (차단) 탐지
+       Suricata가 악성 패턴 차단 시 발생하는 로그
+       =========================================================== -->
+  <rule id="100005" level="12">
+    <if_group>firewall</if_group>
+    <match>suricata</match>
+    <match>blocked</match>
+    <description>OPNSense Suricata IPS: Malicious traffic BLOCKED</description>
+    <group>suricata,ids,blocked,</group>
+    <mitre>
+      <id>T1071</id>
+    </mitre>
+  </rule>
+
+  <!-- ===========================================================
+       [Rule 100006] OPNSense NAT 이상 탐지
+       내부 IP가 외부로 그대로 노출되는 경우 탐지
+       (NAT 미적용 상태 의심)
+       =========================================================== -->
+  <rule id="100006" level="9">
+    <if_group>firewall</if_group>
+    <match>192.168.20.</match>
+    <description>OPNSense: Internal IP exposed to WAN - Check Outbound NAT config</description>
+    <group>nat,misconfiguration,</group>
+  </rule>
+
+  <!-- ===========================================================
+       [Rule 100007] OPNSense 방화벽 설정 변경 감지
+       방화벽 룰 변경 시 발생하는 로그
+       =========================================================== -->
+  <rule id="100007" level="10">
+    <if_group>firewall</if_group>
+    <match>config changed</match>
+    <description>OPNSense: Firewall configuration changed</description>
+    <group>config_change,audit,</group>
+    <mitre>
+      <id>T1562.004</id>
+    </mitre>
+  </rule>
+
+</group>
+
+
+<!--
+  =============================================================
+  Wazuh Custom Rules - ModSecurity WAF Log Detection
+  Description: ModSecurity WAF 로그 기반 웹 공격 탐지 룰
+  로그 파일: /var/log/httpd/modsec_audit.log
+  =============================================================
+-->
+
+<group name="modsecurity,waf,web,">
+
+  <!-- ===========================================================
+       [Rule 200001] ModSecurity 기본 탐지 이벤트
+       =========================================================== -->
+  <rule id="200001" level="6">
+    <decoded_as>json</decoded_as>
+    <field name="type">modsecurity</field>
+    <description>ModSecurity WAF: Event detected</description>
+    <group>waf,</group>
+  </rule>
+
+  <!-- ===========================================================
+       [Rule 200002] ModSecurity SQL Injection 탐지
+       =========================================================== -->
+  <rule id="200002" level="10">
+    <if_sid>200001</if_sid>
+    <match>SQL Injection</match>
+    <description>ModSecurity WAF: SQL Injection attempt detected</description>
+    <group>waf,sqli,attack,</group>
+    <mitre>
+      <id>T1190</id>
+    </mitre>
+  </rule>
+
+  <!-- ===========================================================
+       [Rule 200003] ModSecurity XSS 탐지
+       =========================================================== -->
+  <rule id="200003" level="10">
+    <if_sid>200001</if_sid>
+    <match>XSS</match>
+    <description>ModSecurity WAF: XSS attempt detected</description>
+    <group>waf,xss,attack,</group>
+    <mitre>
+      <id>T1059.007</id>
+    </mitre>
+  </rule>
+
+  <!-- ===========================================================
+       [Rule 200004] ModSecurity 셸코드 탐지
+       =========================================================== -->
+  <rule id="200004" level="12">
+    <if_sid>200001</if_sid>
+    <match>Shellcode</match>
+    <description>ModSecurity WAF: Shellcode pattern detected</description>
+    <group>waf,shellcode,attack,</group>
+    <mitre>
+      <id>T1059</id>
+    </mitre>
+  </rule>
+
+  <!-- ===========================================================
+       [Rule 200005] ModSecurity 어드민 페이지 접근 차단
+       =========================================================== -->
+  <rule id="200005" level="8">
+    <if_sid>200001</if_sid>
+    <match>Admin page access blocked</match>
+    <description>ModSecurity WAF: Admin page access attempt blocked</description>
+    <group>waf,admin_access,</group>
+    <mitre>
+      <id>T1078</id>
+    </mitre>
+  </rule>
+
+  <!-- ===========================================================
+       [Rule 200006] ModSecurity 웹 셸 접근 차단
+       =========================================================== -->
+  <rule id="200006" level="14">
+    <if_sid>200001</if_sid>
+    <match>Web shell access blocked</match>
+    <description>ModSecurity WAF: Web shell access attempt BLOCKED</description>
+    <group>waf,webshell,attack,</group>
+    <mitre>
+      <id>T1505.003</id>
+    </mitre>
+  </rule>
+
+  <!-- ===========================================================
+       [Rule 200007] ModSecurity 동일 IP 반복 공격 탐지
+       1분 내 동일 IP에서 5회 이상 WAF 탐지
+       =========================================================== -->
+  <rule id="200007" level="14" frequency="5" timeframe="60">
+    <if_matched_sid>200001</if_matched_sid>
+    <same_source_ip />
+    <description>ModSecurity WAF: Repeated attack from same IP (5 hits in 60s)</description>
+    <group>waf,repeated_attack,</group>
+  </rule>
+
+</group>

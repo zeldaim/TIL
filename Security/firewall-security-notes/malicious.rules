@@ -1,0 +1,88 @@
+# =============================================================
+# Suricata Custom Rules - Malicious Pattern Detection
+# Author: zeldaim
+# Description: 악성파일 패턴 탐지 및 차단 룰셋
+# Reference: OPNSense IPS Plugin 실습 기반
+# =============================================================
+
+# --------------------------------------------------------------
+# [SID 1] BROWSER - IE Exploit (RIFF/ACON/anih 패턴)
+# 브라우저 취약점을 이용한 익스플로잇 파일 탐지
+# --------------------------------------------------------------
+alert tcp any any -> any any (\
+    msg:"BROWSER-IE Microsoft Internet Explorer exploit attempt"; \
+    flow:to_client,established; \
+    file_data; \
+    content:"RIFF"; depth:4; \
+    content:"ACON"; within:4; distance:4; \
+    content:"anih"; distance:0; nocase; \
+    byte_test:4,>,36,0,little,relative; \
+    sid:1; rev:1;)
+
+# --------------------------------------------------------------
+# [SID 2] MALSIG1 - 악성코드 패턴 탐지 (alert 모드)
+# 탐지만 하고 차단하지 않음 → 로그 기록용
+# --------------------------------------------------------------
+alert tcp any any -> any any (\
+    msg:"Malicious file pattern MALSIG1 detected"; \
+    flow:to_client,established; \
+    file_data; \
+    content:"MALSIG1"; depth:16; \
+    sid:2; rev:1;)
+
+# --------------------------------------------------------------
+# [SID 3] MALSIG2 - 악성코드 변종 패턴 차단 (drop 모드)
+# 탐지 즉시 패킷 차단 + 로그 기록
+# --------------------------------------------------------------
+drop tcp any any -> any any (\
+    msg:"Malicious file pattern MALSIG2 blocked"; \
+    flow:to_client,established; \
+    file_data; \
+    content:"MALSIG2"; depth:16; \
+    sid:3; rev:1;)
+
+# --------------------------------------------------------------
+# [SID 4] HTTP - 웹 셸 업로드 시도 탐지
+# POST 요청에서 웹셸 키워드 탐지
+# --------------------------------------------------------------
+alert http any any -> any any (\
+    msg:"WEB-SHELL Upload attempt detected"; \
+    flow:to_server,established; \
+    http.method; content:"POST"; \
+    http.request_body; \
+    content:"<?php"; nocase; \
+    pcre:"/(\beval\b|\bsystem\b|\bexec\b|\bpassthru\b)/i"; \
+    sid:4; rev:1;)
+
+# --------------------------------------------------------------
+# [SID 5] HTTP - SQL Injection 시도 탐지
+# GET/POST 파라미터에서 SQLi 패턴 탐지
+# --------------------------------------------------------------
+alert http any any -> any any (\
+    msg:"SQL Injection attempt detected"; \
+    flow:to_server,established; \
+    http.uri; \
+    pcre:"/(\%27|\'|(\-\-)|(\%23)|(#))/i"; \
+    sid:5; rev:1;)
+
+# --------------------------------------------------------------
+# [SID 6] HTTP - 디렉토리 트래버설 시도 탐지
+# ../를 이용한 경로 탈출 시도 탐지
+# --------------------------------------------------------------
+alert http any any -> any any (\
+    msg:"Directory Traversal attempt detected"; \
+    flow:to_server,established; \
+    http.uri; \
+    content:"../"; \
+    sid:6; rev:1;)
+
+# --------------------------------------------------------------
+# [SID 7] HTTP - 민감 파일 접근 시도 탐지
+# /etc/passwd, /etc/shadow 등 민감 파일 요청 탐지
+# --------------------------------------------------------------
+alert http any any -> any any (\
+    msg:"Sensitive file access attempt detected"; \
+    flow:to_server,established; \
+    http.uri; \
+    pcre:"/(\/etc\/passwd|\/etc\/shadow|\/etc\/hosts|\.env|\.git)/i"; \
+    sid:7; rev:1;)
